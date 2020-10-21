@@ -139,6 +139,26 @@ Also during the first implementation, I am working only on my computer first to 
 
 I don't have a full grasp of `pywin32` library, and that causes to force the players to open Genshin Impact 1 second within the program is running. It is also possible that the program will not run as expected if you alt+tabbed while it is processing. This code will definitely work for windowed mode though, but the user experience will not be nice either because this code forces to make sure Genshin Impact window is on the top of all other windows.
 
+In no way genshingrab is affiliated to MiHoYo, Genshin Impact, Google, and OpenCV, references regarding any of them are under their respective rights.
+
+Informations obtained by this program regarding the data scraped from the screenshots of the Genshin Impact client are never meant to change the gameplay which is unfair for other players or harmful for the affiliated company as this data never processed for the usage to divert the inner workings of Genshin Impact. Genshin Impact experience will stay their way. This program will not inspect, change, add, or decrease the inner workings of Genshin Impact.
+
+The true intention of this program is made to make sure third-party developers that are building projects related to Genshin Impact may obtain the data from the consenting user for a fair and safe usages and not violating terms of serives of Genshin Impact, including but not limited to these use cases:
+
+- Source of Discord Rich Presence data which should be public,
+- Tracking progress of the users i.e day-to-day basis level progress,
+- Display player details on their livestreams i.e on YouTube or Twitch, and
+- Creating heat map of in-game locations of a user so they know which place they often or rarely visit on last session,
+- etc. you name it,
+
+without altering Genshin Impact itself in many ways.
+
+The program in this project is not collecting any data in a permanent storage which is accessible by the developers, other users, or any third parties except if the user consented to share the data explicitly. This is simply a tool to help third party developers to create more helpful tools either for developers or end users.
+
+<!--We are not encouraging fraudulent activities from the using of this project or its derivative, either from end user or developers, and will not be responsible for any damage caused by fraudulent activities which against our philosophy. We do not offer, even against, to give instant in-game advantages which will be unfair. We are daring to put our faith and hope for this amazing and creative community and look forward for great inventions.-->
+
+We are also hoping that MiHoYo would open their access for public API or at least manage integrations to other platforms in which developers can build on it without fear of being 
+
 ## Acknowledgement
 
 Thanks for [Kxnrl](https://github.com/Kxnrl) for the amazing project which I use almost everytime I play Genshin Impact. I hope that project will finally be completed for all use cases and the experience in using the Discord RPC be seamless.
@@ -146,6 +166,8 @@ Thanks for [Kxnrl](https://github.com/Kxnrl) for the amazing project which I use
 Also thanks for my friends both on Genshin Impact and Facebook friends list for the support.
 
 And [Hana Macchia](https://www.youtube.com/channel/UCpJtk0myFr5WnyfsmnInP-w/) for the entertainment you gave to us all, or at least just me, during the development.
+
+Michael Reeves. [Why](https://www.youtube.com/watch?v=D75ZuaSR8nQ). Jokes aside the fortnite video is basically helping me creating this lol
 
 MiHoYo, for the amazing game!
 
