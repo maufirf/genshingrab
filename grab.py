@@ -1,93 +1,128 @@
-'''
-from PIL import ImageGrab
-import numpy as np
-import cv2
-from time import sleep
-tf = 1
-while(True):
-    img = ImageGrab.grab(bbox=(100,10,400,780)) #bbox specifies specific region (bbox= x,y,width,height)
-    img_np = np.array(img)
-    frame = cv2.cvtColor(img_np, cv2.COLOR_BGR2GRAY)
-    cv2.imshow("test", frame)
-    cv2.waitKey(0)
-    #sleep(tf)
-    cv2.destroyAllWindows()
-'''
-
 from PIL import ImageGrab, Image
 import win32gui
+from win32api import GetSystemMetrics
 from time import sleep
 import cv2
-from win32api import GetSystemMetrics
 import pytesseract
 from pytesseract import Output
 import numpy as np
 import itertools
+import json
 
-fullscr_w = GetSystemMetrics(0)
-fullscr_h = GetSystemMetrics(1)
+from utils import exceptions
 
-def char_list_box():
+def _phase_0_init(return_globals=False):
+    global fullscr_w, fullscr_h, cut_profile
+    fullscr_w = GetSystemMetrics(0)
+    fullscr_h = GetSystemMetrics(1)
+    with open('settings/cut_profile.json' , 'r') as f:
+        cut_profile = json.load(f)
+        f.close()
+    if return_globals:
+        return fullscr_w, fullscr_h, cut_profile
+
+_phase_0_init()
+
+def get_cut_pos(cut_profile_name):
+    return tuple(cut_profile[cut_profile_name][cut_pos] for cut_pos in cut_profile['common_attribute']['cut_pos'])
+
+def box_char_list():
+    _l, _t, _r, _b = get_cut_pos('box_char_list')
     return (
-        int(round(fullscr_w*.85)),
-        int(round(fullscr_h*.3125)),
-        int(round(fullscr_w*.925)),
-        int(round(fullscr_h*.60))
+        int(round(fullscr_w*_l)),
+        int(round(fullscr_h*_t)),
+        int(round(fullscr_w*_r)),
+        int(round(fullscr_h*_b))
     )
 
-toplist, winlist = [], []
-def enum_cb(hwnd, results):
-    winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
-win32gui.EnumWindows(enum_cb, toplist)
+COLLECTION_TYPES = [tuple, list]  
 
-#print(f'winlist = {winlist}')
+def get_window(interval=1):
+    global winlist, hwnd
+    toplist, winlist = [], []
 
-windows = [(hwnd, title) for hwnd, title in winlist if 'genshinimpact' in title.lower() or 'genshin impact' in title.lower()]
-print(f'windows = {windows}')
-# just grab the hwnd for first window matching firefox
-app = windows[0]
-hwnd = app[0]
-sleep(1)
-win32gui.SetForegroundWindow(hwnd)
-bbox = win32gui.GetWindowRect(hwnd)
+    def _enum_cb(hwnd, results):
+        winlist.append((hwnd, win32gui.GetWindowText(hwnd)))
 
-cropmaster = char_list_box()
-basewidth = 600
-hsize = int(round((basewidth/(cropmaster[2]-cropmaster[0]))*(cropmaster[3]-cropmaster[1])))
+    win32gui.EnumWindows(_enum_cb, toplist)
+    windows = [(hwnd, title) for hwnd, title in winlist if 'genshinimpact' in title.lower() or 'genshin impact' in title.lower()]
+    print(f'windows = {windows}')
+    # just grab the hwnd for first window matching genshin impact
+    app = windows[0]
+    hwnd = app[0]
+    sleep(interval)
+    win32gui.SetForegroundWindow(hwnd)
+    bbox = win32gui.GetWindowRect(hwnd)
 
-def get_image():
+    return bbox
+
+def resized_box_size(box, as_tuple=True, **kwargs):
+    if type(box) not in COLLECTION_TYPES:
+        raise TypeError(f'Argument box has to be a tuple or list. Passed argument is {type(box)}')
+    if len(box)!=4:
+        raise exceptions.ImproperArgumentError(
+            error_type=exceptions.IMPROPER_ARGUMENT_TYPE.WRONG_FORMAT,
+            message=f'Argument box has to be a tuple or list with exactly 4 items. Your argument has {len(box)} item(s).',
+            args=box
+        )
+    if any([type(x)!=int for x in box]):
+        raise TypeError('All 4 items of argument box tuple/list must be an integer.')
+    bwidth = box[2]-box[0]
+    bheight = box[3]-box[1]
+    if 'basewidth' in kwargs:
+        if 'baseheight' in kwargs:
+            raise exceptions.ImproperArgumentError(
+                error_type=exceptions.IMPROPER_ARGUMENT_TYPE.TOO_MUCH,
+                message=f'You may only pass either basewidth or baseheight keyword argument, not both.',
+                args=kwargs
+            )
+        axis_first = kwargs['basewidth']
+        axis_second = int(round((axis_first*bheight)/bwidth))
+        return (axis_first, axis_second) if as_tuple else axis_second
+    elif 'baseheight' in kwargs:
+        axis_first = kwargs['baseheight']
+        axis_second = int(round((axis_first*bwidth)/bheight))
+        return (axis_second, axis_first) if as_tuple else axis_second
+    else:
+        raise exceptions.ImproperArgumentError(
+            error_type=exceptions.IMPROPER_ARGUMENT_TYPE.NOT_MUCH,
+            message=f'You may only pass either basewidth or baseheight keyword argument, not none of them.',
+            args=kwargs
+        )
+
+def _phase_1_init(return_globals=False, interval=1):
+    global box_cl, bbox, _cl_base_default_key, _cl_base, cl_resized_size, cl_basewidth, cl_baseheight
+    box_cl = box_char_list()
+    bbox = get_window(interval=interval)
+    _cl_base_default_key = cut_profile['box_char_list']['base_default_key']
+    if _cl_base_default_key not in cut_profile['box_char_list']['valid_base_default_keys']:
+        raise exceptions.SettingsError(
+            "base_default_key can only be either basewidth or baseheight"
+        )
+    _cl_base = cut_profile['box_char_list'][_cl_base_default_key]
+    if _cl_base_default_key == 'basewidth':
+        cl_resized_size = resized_box_size(box_cl, basewidth=_cl_base)
+    else:
+        cl_resized_size = resized_box_size(box_cl, baseheight=_cl_base)
+    cl_basewidth, cl_baseheight = cl_resized_size
+    if return_globals:
+        return box_cl, bbox, cl_resized_size, cl_basewidth, cl_baseheight
+
+_phase_1_init()  
+
+def get_image(bbox=bbox):
     img = ImageGrab.grab(bbox)
-    imgcrop = img.crop(box=cropmaster)
-    imgcrop = imgcrop.resize((basewidth,hsize), Image.ANTIALIAS)
+    return img
+
+def crop_image(img, box):
+    imgcrop = img.crop(box=box_cl)
+    imgcrop = imgcrop.resize((cl_basewidth,cl_baseheight), Image.ANTIALIAS)
     imgcrop_bw = imgcrop.convert('L')
     imgcrop_bw_np = np.array(imgcrop_bw,dtype='uint8')
     ret,tr = cv2.threshold(imgcrop_bw_np,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     return {
         'imgcrop':imgcrop, 'tr':tr, 'ret':ret
     }
-
-'''
-img = ImageGrab.grab(bbox)
-
-# https://stackoverflow.com/questions/48311273/ocr-small-image-with-python
-imgcrop = img.crop(box=char_list_box())
-
-basewidth = 600
-hsize = int(round((basewidth/imgcrop.size[0])*imgcrop.size[1]))
-
-imgcrop = imgcrop.resize((basewidth,hsize), Image.ANTIALIAS)
-#imgcrop.save("debug_plain.png")
-imgcrop.show()
-
-imgcrop_np = np.array(imgcrop,dtype='uint8')
-
-imgcrop_bw = imgcrop.convert('L')
-imgcrop_bw_np = np.array(imgcrop_bw,dtype='uint8')
-ret,tr = cv2.threshold(imgcrop_bw_np,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-'''
-#Image.fromarray(tr).save(f"debug_threshold.png")
-
-#imgcrop_np = np.array(imgcrop_bw)[:, :, ::-1].copy()
 
 def get_data(imgcrop, tr):
     outimg=np.array(imgcrop)
@@ -101,21 +136,6 @@ def get_data(imgcrop, tr):
         'outimg':outimg
     }
 
-
-
-
-'''tesdat=pytesseract.image_to_data(tr, output_type=Output.DICT)
-n_boxes = len(tesdat['level'])
-for i in range(n_boxes):
-    (x, y, w, h) = (tesdat['left'][i], tesdat['top'][i], tesdat['width'][i], tesdat['height'][i])
-    cv2.rectangle(imgcrop_np, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-imgcrop_boxed = Image.fromarray(imgcrop_np)
-imgcrop_boxed.save("debug_boxed.png")
-imgcrop_boxed.show()'''
-
-#print(tesdat['text'])
-
 def filter_names(text_data):
     tex = text_data
     tex_truth = [len(x)>=4 for x in tex]
@@ -127,26 +147,6 @@ def filter_names(text_data):
         'tex_i':tex_i,
         'tex_filtered':tex_filtered
     }
-
-'''tex = tesdat['text']
-tex_truth = [len(x)>=4 for x in tex]
-tex_i = np.where(tex_truth)[0]
-print(f'valid texts are on indices: {tex_i}')
-tex_filtered = [tex[int(i)] for i in tex_i]
-print(f'which are = {tex_filtered}')'''
-
-img_comp = []
-data_comp = []
-name_comp = []
-tries = 100
-
-for i in range(tries):
-    print(f'try {i}')
-    img_comp.append(get_image())
-    data_comp.append(get_data(img_comp[-1]['imgcrop'], img_comp[-1]['tr']))
-    name_comp.append(filter_names(data_comp[-1]['tesdat']['text']))
-
-Image.fromarray(data_comp[-1]['outimg']).show()
 
 def finalize_names(name_comp):
     onlyvalids = [x['tex_filtered'] for x in name_comp]
@@ -162,8 +162,29 @@ def finalize_names(name_comp):
         'counts': counts_sort
     }
 
-finale = finalize_names(name_comp)
-finname = list(finale['roster'])
+def get_roster(shots=100, bbox=bbox):
+    global img_comp, imgcrop_comp, data_comp, name_comp, finale, finname
+    img_comp = []
+    imgcrop_comp = []
+    data_comp = []
+    name_comp = []
+    shots = 100
 
-print('Gotcha! valid rosters are:')
-print("\n".join(finname))
+    for i in range(shots):
+        print(f'try {i}')
+        img_comp.append(get_image(bbox=bbox))
+        imgcrop_comp.append(crop_image(img_comp[-1], box_cl))
+        data_comp.append(get_data(imgcrop_comp[-1]['imgcrop'], imgcrop_comp[-1]['tr']))
+        name_comp.append(filter_names(data_comp[-1]['tesdat']['text']))
+
+    Image.fromarray(data_comp[-1]['outimg']).show()
+
+    finale = finalize_names(name_comp)
+    finname = list(finale['roster'])
+
+    print('Gotcha! valid rosters are:')
+    print("\n".join(finname))
+
+    return img_comp, imgcrop_comp, data_comp, name_comp, finale, finname
+
+get_roster(100)
