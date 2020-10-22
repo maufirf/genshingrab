@@ -12,6 +12,9 @@ import json
 from utils import exceptions
 
 def _phase_0_init(return_globals=False):
+    """
+    Initialize basic global constants
+    """
     global fullscr_w, fullscr_h, cut_profile
     fullscr_w = GetSystemMetrics(0)
     fullscr_h = GetSystemMetrics(1)
@@ -24,9 +27,22 @@ def _phase_0_init(return_globals=False):
 _phase_0_init()
 
 def get_cut_pos(cut_profile_name):
+    """
+    Get cutting positions of selected profile. returns a tuple
+    of four integers describing which section of screen that
+    should be cut. Currently, only works with relative sizes,
+    assuming:
+    - initial x (left)
+    - initial y (top)
+    - end x (left)
+    - end y (bottom)
+    """
     return tuple(cut_profile[cut_profile_name][cut_pos] for cut_pos in cut_profile['common_attribute']['cut_pos'])
 
 def box_char_list():
+    """
+    Get cutting positions for character list profile
+    """
     _l, _t, _r, _b = get_cut_pos('box_char_list')
     return (
         int(round(fullscr_w*_l)),
@@ -38,6 +54,9 @@ def box_char_list():
 COLLECTION_TYPES = [tuple, list]  
 
 def get_window(interval=1):
+    """
+    Get current Genshin Impact game screen
+    """
     global winlist, hwnd
     toplist, winlist = [], []
 
@@ -57,6 +76,11 @@ def get_window(interval=1):
     return bbox
 
 def resized_box_size(box, as_tuple=True, **kwargs):
+    """
+    Get the second axis size by the given first axis size
+    based on the aspect ratio given derived from box
+    """
+
     if type(box) not in COLLECTION_TYPES:
         raise TypeError(f'Argument box has to be a tuple or list. Passed argument is {type(box)}')
     if len(box)!=4:
@@ -91,6 +115,9 @@ def resized_box_size(box, as_tuple=True, **kwargs):
         )
 
 def _phase_1_init(return_globals=False, interval=1):
+    """
+    Initialize advanced constants after processing the setting files.
+    """
     global box_cl, bbox, _cl_base_default_key, _cl_base, cl_resized_size, cl_basewidth, cl_baseheight
     box_cl = box_char_list()
     bbox = get_window(interval=interval)
