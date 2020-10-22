@@ -1,0 +1,17 @@
+{
+    "common_attribute": {
+        "cut_pos": ["cut_l", "cut_t", "cut_r", "cut_b"]
+    },
+    "box_char_list": {
+        "cut_l": 0.85,
+        "cut_t": 0.3125,
+        "cut_r": 0.925,
+        "cut_b": 0.60,
+        "basewidth": 600,
+        "baseheight": 1292,
+
+        "base_default_key": "basewidth",
+
+        "valid_base_default_keys": ["basewidth", "baseheight"]
+    }
+}
