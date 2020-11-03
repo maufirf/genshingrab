@@ -1,3 +1,10 @@
+#####################################
+#                                   #
+#           genshin lol             #        
+#                                   #
+#####################################
+
+
 from PIL import ImageGrab, Image
 import win32gui
 from win32api import GetSystemMetrics
